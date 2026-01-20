@@ -1,87 +1,104 @@
 """
-CLI-verktyg som XOR-krypterar rå källkod.
-Genom att läsa källkod från en fil,
-XOR-kryptera och spara datan i råformat,
-python-array eller c-array.
-Tilltänkt användning är för obfuskering av shellcode innan du använder den i en payload-kedja.
+Use this CLI tool to XOR-encrypt raw shellcode.
+It reads shellcode from a file, applies XOR-encryption 
+and saves the data in raw format, as Python array or C array.
+The intended use is to obfuscate shellcode prior to its use in a payload chain.
+
+Example:
+    python slutprojekt.py -i example.bin -o output.enc -k key -f python.
+
+This will create a file containing obfuscated shellcode in Python format.
 """
 import argparse
 import sys
 
 
-# Funktioner som presenterar obfuskerad källkod i önskat språk.
+# Functions that represent obfuscated shellcode in the chosen programming language.
 def py_array(data):
     """
-    Konverterar bytes till en python-lista med hexadecimaler,
-    används för att visa obfuskerad data i python-kod.
-    
+    Convert bytes into a Python array presentation.
+    Output is formatted as a list with hexadecimal values, made
+    for usage in Python source code.
+
+    :param data: Obfuscated shellcode data in bytes.
+    :type data: bytes
+    :return: Python formatted shellcode array as a string.
+    :rtype: str
     """
     hexlist = [f"0x{a:02x}" for a in data]
     return f"shellcode = [{','.join(hexlist)}]"
 
 def c_array(data):
     """
-    Konverterar bytes till en C-lista med hexadecimaler,
-    används för att visa obfuskerad data i C-kod.
+    Convert bytes into a C-array presentation.
+    Output is formatted as a list with hexadecimal values, made
+    for usage in C source code.
+
+    :param data: Obfuscated shellcode data in bytes.
+    :type data: bytes
+    :return: C formatted shellcode array as a string.
+    :rtype: str
     
     """
     hexlist = [f"0x{a:02x}" for a in data]
     return f"unsigned char buf[] = {{{','.join(hexlist)}}};"
 
-# Funktionen som obfuskerar shellcode
+# The function that obfuscates the shellcode
 def xor(data, key):
     """
-    Xor används för enkel payload-obfuskering.
-    Data är filens innehåll i bytes, key är nyckeln för själva obfuskeringen,
-    funktionen returnerar den obfuskerade datan.
+    Applies XOR-obfuscation to a payload.
+    The function reads binary data and XORs it with the provided key
+    to produce an obfuscated payload suitable for shellcode usage.
 
+    :param data: Payload data in bytes.
+    :param key: XOR-key used for obfuscation.
+    :return: XOR-obfuscated payload.
     """
     outputs = bytearray()
     for i in range(len(data)):
         outputs.append(data [i] ^ key[i % len(key)])
     return bytes(outputs)
 
-#Huvudprogram med argparse
+#Main function with argparse arguments
 def main ():
     """
-    Programmets huvudfunktion,
-    läser input från kommandoraden med argparse,
-    öppnar en fil med rå shellcode,
-    obfuskerar shellcode med XOR och vald nyckel,
-    sparar eller skriver ut den krypterade datan i valt format.
+    Program main function and entry point,
+    Parses command-line arguments using argparse, reads raw shellcode
+    from chosen input file, applies XOR-obfuscation by using specified key,
+    and outputs the result in raw, Python array or C array format.
     """
-    #Skapar ett argparse-objekt för att handskas med CLI-argument
+    #Create an argparse-object to handle CLI arguments
     parser = argparse.ArgumentParser(description="XOR encryption for raw shellcode.")
     
-    #Här definerar vi argumenten, om det ska vara input eller output, nyckel och format. 
+    #Define input/output arguments, key and output format.
     parser.add_argument("-i", "--infile", dest="input_file", required=True,help="Input file containing raw shellcode")
     parser.add_argument("-o", "--outfile", dest="output_file", help="Output file for encrypted shellcode")
     parser.add_argument("-k", "--key", required=True, help="XOR key")
     parser.add_argument("-f", "--format", choices=["raw", "python", "c"], default="raw", help="Output-format")
 
-    #Här läser den in argumenten som användaren skrivit in i terminalen.
+    #Parse arguments provided by the user
     args = parser.parse_args()
    
-    try: #öppnar och läser filen i binärt läge.
+    try: #Open and reads the input file as binaries.
         with open(args.input_file, "rb") as f:
             shellcode = f.read()
-    except FileNotFoundError: #Finns/hittas filen inte så körs felhanteringen.
+    except FileNotFoundError: #Error handling if the file does not exist.
         print("Error, file could not load.")
         sys.exit(1)
 
-    if args.key.startswith("0x"): #konverterar nyckel till heltal om den är i hex.
+    if args.key.startswith("0x"): #Converts the key to integer if its entered in hexadecimal format.
         key = [int(args.key,16)]
     else:
-        key = [ord(c) for c in args.key] #Annars konvertera alla tecken i strängen till ASCII-värde
+        key = [ord(c) for c in args.key] #Else, convert each character to its ASCII-value
 
     crypt_data = xor(shellcode, key)
 
-    if args.format ==  "python": #formaterar output i valt format.
+    if args.format ==  "python": #Output format according to selected format.
         result = py_array(crypt_data)
     elif args.format == "c":
         result = c_array(crypt_data)
     else:
-        result = crypt_data #om inget format har valt så skrivs det ut i raw-bytes.
+        result = crypt_data #Default output is raw bytes if nothing else is chosen.
 
     if args.output_file:
         if args.format == "raw":
@@ -92,7 +109,7 @@ def main ():
             f.write(result)
         print(f"Saved to {args.output_file}")
     else:
-        print(result) #anges ingen outputfil, skrivs det i terminalen.
+        print(result) #If no output file is specifed, print to terminal.
 
 if __name__ == "__main__":
     main()
