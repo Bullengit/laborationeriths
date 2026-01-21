@@ -54,10 +54,12 @@ def xor(data, key):
     :param key: XOR-key used for obfuscation.
     :return: XOR-obfuscated payload.
     """
-    outputs = bytearray()
-    for i in range(len(data)):
-        outputs.append(data [i] ^ key[i % len(key)])
+    outputs = []
+    key_len = len(key)
+    for i, byte in enumerate(data):
+        outputs.append(byte ^ key[i % key_len])
     return bytes(outputs)
+
 
 #Main function with argparse arguments
 def main ():
